@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ticket Checkout</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #00c79c;
+            --primary-hover: #009e7c;
+            --text-color: #2d3748;
+            --text-light: #718096;
+            --divider-color: #e2e8f0;
+            --background: #f7fafc;
+            --white: #ffffff;
+            --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            --border-radius: 16px;
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: var(--background);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            color: var(--text-color);
+        }
+        
+        .checkout-card {
+            background: var(--white);
+            padding: 2.5rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
+        
+        .icon-header {
+            width: 64px;
+            height: 64px;
+            background: #f0fff4;
+            color: var(--primary-color);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
+            margin: 0 auto 1.5rem;
+        }
+
+        h1 { margin-bottom: 0.5rem; font-size: 1.5rem; font-weight: 600; }
+        .description { color: var(--text-light); font-size: 0.9rem; margin-bottom: 1.5rem; line-height: 1.5; }
+        .price-tag { font-size: 2.5rem; font-weight: 700; color: var(--text-color); margin-bottom: 2rem; }
+        .price-tag span { font-size: 1rem; color: var(--text-light); font-weight: 400; margin-right: 4px; }
+        
+        .mpesa-btn {
+            padding: 1rem;
+            font-size: 1rem;
+            font-weight: 600;
+            background-color: var(--primary-color);
+            border: none;
+            border-radius: 12px;
+            color: var(--white);
+            cursor: pointer;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            transition: all 0.2s ease;
+        }
+        
+        .mpesa-btn:hover { background-color: var(--primary-hover); transform: translateY(-1px); }
+        .mpesa-btn:active { transform: translateY(0); }
+        
+        .divider { color: var(--text-light); font-size: 0.8rem; margin: 2rem 0; position: relative; text-transform: uppercase; letter-spacing: 1px; }
+        .divider::before, .divider::after {
+            content: ""; position: absolute; top: 50%; width: 30%; height: 1px; background: var(--divider-color);
+        }
+        .divider::before { left: 0; }
+        .divider::after { right: 0; }
+        
+        #paypal-container-9Z55GXGXHJXWW {
+            width: 100%;
+            min-height: 50px;
+        }
+
+        .toast {
+            visibility: hidden;
+            min-width: 280px;
+            background-color: #2d3748;
+            color: #fff;
+            text-align: center;
+            border-radius: 8px;
+            padding: 16px;
+            position: fixed;
+            z-index: 1000;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: 0.3s;
+            font-size: 0.9rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .toast.show { visibility: visible; opacity: 1; }
+        
+        .preview-info {
+            font-size: 0.75rem;
+            color: #a0aec0;
+            margin-top: 1.2rem;
+            padding: 12px;
+            background: #edf2f7;
+            border-radius: 8px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="checkout-card">
+        <div class="icon-header">
+            <i class="fas fa-ticket-alt"></i>
+        </div>
+        <h1>Event Entry</h1>
+        <p class="description">Standard ticket for event access.</p>
+        <div class="price-tag"><span>KES</span>10</div>
+        
+        <!-- Primary Payment: M-Pesa (via Paystack) -->
+        <button id="payButton" class="mpesa-btn">
+            <i class="fas fa-mobile-alt"></i> Pay with M-Pesa
+        </button>
+
+        <div class="divider">or</div>
+        
+        <!-- Secondary Payment: PayPal Hosted Button -->
+        <div id="paypal-container-9Z55GXGXHJXWW"></div>
+        
+        <div id="host-notice" class="preview-info">
+            <i class="fas fa-lock"></i> PayPal buttons render on live domains. 
+            Open this file in a browser to test.
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <!-- Paystack SDK -->
+    <script src="https://js.paystack.co/v1/inline.js"></script>
+    
+    <script>
+        function showMessage(msg) {
+            const toast = document.getElementById("toast");
+            toast.textContent = msg;
+            toast.classList.add("show");
+            setTimeout(() => { toast.classList.remove("show"); }, 5000);
+        }
+
+        // --- M-Pesa Integration (Paystack) ---
+        document.getElementById('payButton').addEventListener('click', function() {
+            const handler = PaystackPop.setup({
+                key: 'pk_live_639ef627c0703f04f9e1ced898b982ab104b9489', 
+                email: 'customer@example.com', 
+                amount: 1000, // 1000 cents = 10 KES
+                currency: 'KES',
+                callback: (res) => showMessage(`Success! Ref: ${res.reference}`),
+                onClose: () => showMessage('Payment window closed.')
+            });
+            handler.openIframe();
+        });
+
+        // --- PayPal Hosted Button Integration ---
+        function initPayPal() {
+            // Check if environment allows script execution (security check)
+            const canRunPayPal = window.location.host && window.location.protocol !== 'data:';
+
+            if (!canRunPayPal) {
+                document.getElementById('host-notice').style.display = 'block';
+                return;
+            }
+
+            const script = document.createElement('script');
+            script.src = "https://www.paypal.com/sdk/js?client-id=BAA4cHvAu_yDmH-j47RE-QAwLsnqqif2YLXHe5CbCgqJ5dNwGJZcHqBOtrfCRyagFl0NV1paENfzdg730E&components=hosted-buttons&disable-funding=venmo&currency=USD";
+            script.async = true;
+
+            script.onload = function() {
+                if (window.paypal && window.paypal.HostedButtons) {
+                    window.paypal.HostedButtons({
+                        hostedButtonId: "9Z55GXGXHJXWW",
+                    }).render("#paypal-container-9Z55GXGXHJXWW");
+                }
+            };
+            
+            document.head.appendChild(script);
+        }
+
+        initPayPal();
+    </script>
+</body>
+  </html>
